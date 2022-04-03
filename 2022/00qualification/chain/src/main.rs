@@ -6,7 +6,7 @@ use std::{
 struct Node {
     max_weight: u32,
     // (max_weight, idx)
-    children: Vec<(u32, usize)>,
+    children: Vec<usize>,
 }
 
 impl Node {
@@ -18,26 +18,23 @@ impl Node {
     }
 
     fn insert(&mut self, idx: usize) {
-        self.children.push((0, idx));
+        self.children.push(idx);
     }
 
     fn calc_max(nodes: &mut [Self], pos: usize) -> u32 {
         let mut mw = nodes[pos].max_weight;
         for chid in 0..nodes[pos].children.len() {
-            let ch_max_weight = Self::calc_max(nodes, nodes[pos].children[chid].1);
-            nodes[pos].children[chid].0 = ch_max_weight;
+            Self::calc_max(nodes, nodes[pos].children[chid]);
         }
-        if let Some((min_pos, _)) = nodes[pos]
+        if let Some(min_child_pos) = nodes[pos]
             .children
             .iter()
-            .enumerate()
-            .min_by_key(|(_, &b)| b)
+            .cloned()
+            .min_by_key(|&b| nodes[b].max_weight)
         {
-            nodes[pos].children.swap(0, min_pos);
-        }
-        if let Some(&(ch_w, p)) = nodes[pos].children.first() {
-            mw = std::cmp::max(mw, ch_w);
-            nodes[p].max_weight = 0;
+            let min_child = &mut nodes[min_child_pos];
+            mw = std::cmp::max(mw, min_child.max_weight);
+            min_child.max_weight = 0;
         }
         nodes[pos].max_weight = mw;
         mw
@@ -45,17 +42,18 @@ impl Node {
 
     fn find_sum(nodes: &[Self], pos: usize, sum: &mut u64) {
         *sum += nodes[pos].max_weight as u64;
-        for (_, id) in &nodes[pos].children {
+        for id in &nodes[pos].children {
             Self::find_sum(nodes, *id, sum);
         }
     }
 }
 
-fn parse_vec<T: FromStr + Default>(line: &str) -> Vec<T>
+fn parse_vec<T: FromStr + Default>(size: usize, line: &str) -> Vec<T>
 where
     <T as FromStr>::Err: std::fmt::Debug,
 {
-    let mut v = vec![Default::default()];
+    let mut v = Vec::with_capacity(size + 1);
+    v.push(Default::default());
     v.extend(line.split(' ').map(|p| p.parse().unwrap()));
     v
 }
@@ -79,8 +77,8 @@ fn main() {
 
     for i in 1..=t {
         let n: usize = lines.next().unwrap().unwrap().parse().unwrap();
-        let fs = parse_vec::<u32>(&lines.next().unwrap().unwrap());
-        let ps = parse_vec::<usize>(&lines.next().unwrap().unwrap());
+        let fs = parse_vec::<u32>(n, &lines.next().unwrap().unwrap());
+        let ps = parse_vec::<usize>(n, &lines.next().unwrap().unwrap());
         assert_eq!(n + 1, fs.len());
         assert_eq!(n + 1, ps.len());
 
