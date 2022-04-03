@@ -27,8 +27,14 @@ impl Node {
             let ch_max_weight = Self::calc_max(nodes, nodes[pos].children[chid].1);
             nodes[pos].children[chid].0 = ch_max_weight;
         }
-        nodes[pos].children.shrink_to_fit();
-        nodes[pos].children.sort_unstable();
+        if let Some((min_pos, _)) = nodes[pos]
+            .children
+            .iter()
+            .enumerate()
+            .min_by_key(|(_, &b)| b)
+        {
+            nodes[pos].children.swap(0, min_pos);
+        }
         if let Some(&(ch_w, p)) = nodes[pos].children.first() {
             mw = std::cmp::max(mw, ch_w);
             nodes[p].max_weight = 0;
